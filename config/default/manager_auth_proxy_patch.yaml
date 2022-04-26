@@ -24,6 +24,9 @@ spec:
         - "--health-probe-bind-address=:8081"
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--leader-elect"
+        ports:
+        - containerPort: 8080
+          $patch: delete
 ---
 apiVersion: v1
 kind: Service
@@ -32,6 +35,8 @@ metadata:
   namespace: system
 spec:
   ports:
+  - $patch: delete
+    port: 8080
   - name: https
     port: 8443
     targetPort: https
