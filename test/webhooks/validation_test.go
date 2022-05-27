@@ -71,6 +71,12 @@ func checkValidation(emqx v1beta3.Emqx) {
 	emqx.SetImage("emqx/emqx:latest")
 	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 
+	emqx.SetImage("127.0.0.1:8443/emqx/emqx:4.4.11")
+	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
+
+	emqx.SetImage("127.0.0.1:8443/emqx/emqx:4.3.3")
+	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
+
 	Eventually(func() error {
 		err := k8sClient.Get(
 			context.TODO(),
