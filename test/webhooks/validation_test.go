@@ -67,15 +67,8 @@ var _ = Describe("EMQX Enterprise", func() {
 func checkValidation(emqx v1beta3.Emqx) {
 	emqx.SetImage("emqx/emqx:4.3.3")
 	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
-
 	emqx.SetImage("emqx/emqx:latest")
 	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-
-	emqx.SetImage("127.0.0.1:8443/emqx/emqx:4.4.11")
-	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-
-	emqx.SetImage("127.0.0.1:8443/emqx/emqx:4.3.3")
-	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
 
 	Eventually(func() error {
 		err := k8sClient.Get(
@@ -107,5 +100,10 @@ func checkValidation(emqx v1beta3.Emqx) {
 	obj.SetImage("emqx:4.3")
 	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
 	obj.SetImage("emqx:4")
+	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
+
+	obj.SetImage("127.0.0.1:8443/emqx/emqx:4.3.3")
+	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
+	obj.SetImage("127.0.0.1:8443/emqx/emqx:4.4.11")
 	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
 }
