@@ -5,9 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
+	"strconv"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	emqxclient "github.com/emqx/emqx-operator/pkg/client"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
@@ -185,6 +189,39 @@ func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Obje
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return postUpdated(obj)
+}
+
+func (handler *Handler) checkEmqxClusterHealthy(emqx v1beta3.Emqx) bool {
+	available, err := getNodeNumberFromEmqxApi(emqx)
+	if err != nil || available < *v1beta3.Emqx(emqx).GetReplicas() {
+		return false
+	}
+	return true
+}
+
+func getNodeNumberFromEmqxApi(emqx v1beta3.Emqx) (int32, error) {
+	getSvcDomain := func(emqx v1beta3.Emqx) string {
+		return fmt.Sprintf("%s.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())
+	}
+	id := "admin"
+	secret := "public"
+	env := v1beta3.EnvList{
+		Items: emqx.GetEnv(),
+	}
+	if item, idx := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"); idx != -1 {
+		id = item.Value
+	}
+	if item, idx := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"); idx != -1 {
+		secret = item.Value
+	}
+	addr := net.JoinHostPort(getSvcDomain(emqx), strconv.FormatInt(int64(emqx.GetListener().API.Port), 10))
+	data, err := emqxclient.New(addr, id, secret).Get("brokers", 10)
+	if err != nil {
+		return 0, err
+	}
+	respData := string(data[:])
+	nodeNum := len(gjson.Get(respData, "data").Array())
+	return int32(nodeNum), nil
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {

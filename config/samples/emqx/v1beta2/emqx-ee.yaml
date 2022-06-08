@@ -23,7 +23,7 @@ spec:
       - name: emqx_management
         enable: true
     listener:
-      type: ClusterIP
+      type: NodePort
       ports:
         mqtt: 1883
         mqtts: 8883
